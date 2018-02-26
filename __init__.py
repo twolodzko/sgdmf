@@ -234,7 +234,7 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
     
     def __init__(self, n_components = 100, n_epoch = 5, learning_rate = 0.005,
                  regularization = 0.02, init_mean = 0.0, init_sd = 0.1,
-                 fit_intercepts = True, encode_labels = False, warm_start = False):
+                 fit_intercepts = True, warm_start = False):
         
         self.d = n_components
         self.n_epoch = n_epoch
