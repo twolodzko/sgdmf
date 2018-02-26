@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 from collections import defaultdict
 
-from sklearn.base import BaseEstimator, TransformerMixin
+from sklearn.base import BaseEstimator, RegressorMixin
 from sklearn.utils import check_X_y
 from sklearn.preprocessing import LabelEncoder
 from sklearn.metrics import r2_score
@@ -164,7 +164,7 @@ class OnlineIndexer():
 
 
 
-class MatrixFactorizer(BaseEstimator, TransformerMixin):
+class MatrixFactorizer(BaseEstimator, RegressorMixin):
     
     """Matrix Factorizer
     
@@ -467,27 +467,5 @@ class MatrixFactorizer(BaseEstimator, TransformerMixin):
             return mu + bi + bj + np.dot(self.P_, self.Q_)
         else:
             return np.dot(self.P_, self.Q_)
-    
-    
-    def score(self, X, y):
-        
-        """Returns the coefficient of determination R^2 of the prediction.
-        
-        Parameters
-        ----------
-        
-        X : {array-like, sparse matrix}, shape (n_samples, n_features)
-            Subset of training data
-            
-        y : numpy array of shape (n_samples,)
-            Subset of target values
-        
-        Returns
-        -------
-        
-        float : The R^2 score.
-        """
-        
-        return r2_score(y, self.predict(X))
     
     
