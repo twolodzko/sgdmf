@@ -29,7 +29,7 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
         have (n, n_components) and (n_components, m) shapes subsequently.
     
     n_epoch : int, default : 5
-        Number of training epochs, number of iterations is n_iter_ = n_samples * n_epoch.
+        Number of training epochs, number of iterations is n_samples * n_epoch.
     
     learning_rate : float, default : 0.005
         Learning rate parameter.
@@ -63,7 +63,7 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
     Attributes
     ----------
     
-    intercepts_ : array , shape (1, 3)
+    intercepts_ : array (float, array, array)
         Constants in decision function (mu, bi, bj).
     
     P_ : array, shape (n, n_components)
@@ -71,9 +71,6 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
     
     Q_ : array, shape (n_components, m)
         Latent matrix.
-    
-    n_iter_ : int
-        The actual number of iterations.
     
     References
     ----------
@@ -113,14 +110,13 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
         np.random.seed(self.random_state)
 
         self.intercepts_ = self.P_ = self.Q_ = None
-        self.N_ = self.n_iter_ = None
         self.encoders_ = [OnlineIndexer(), OnlineIndexer()]
-        self.N_ = self.n_iter_ = 0
+        self.N_ = 0
 
     
     def init_param(self, n, m):
         
-        """Initialise the parameters
+        """Initialize the parameters
         
         The mu, bi, bj parameters are initialised with zeros, while
         P, Q are initialized randomly using values drawn from
@@ -132,10 +128,10 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
         Parameters
         ----------
         n : int
-            First dimension of the factorized matrix.
+            First index of the factorized matrix.
             
         m : int
-            Second dimension of the factorized matrix.
+            Second index of the factorized matrix.
         
         """
                 
@@ -152,9 +148,40 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
         n = self.P_.shape[0]
         m = self.Q_.shape[1]
         return n, m
+
+
+    def _check_param(self, X):
+
+        # Check if parameters were initialized and are consistent with data
+        
+        if self.intercepts_ is None or self.P_ is None or self.Q_ is None:
+            raise ValueError('Parameters were not initialized yet')
+        
+        n, m = self._get_PQ_dims()
+        max_i, max_j = self._max_Xij(X)
+
+        if n < max_i or m < max_j:
+            raise ValueError('X contains new indexes')
             
-            
+        if len(self.intercepts_[1]) < max_i or len(self.intercepts_[2]) < max_j:
+            raise ValueError('X contains new indexes')
+    
+
+    def _check_indexes(self, X):
+        
+        if not np.all(X >= 0):
+            raise ValueError('Indexes need to be non-negative')
+
+        if not np.all(np.isfinite(X)):
+            raise ValueError('Indexes need to be finite')
+
+        if not X.dtype in ('int', 'int32', 'int64'):
+            raise ValueError('Indexes need to be integers')
+    
+    
     def _expand_param(self, X):
+
+        # Initialize the parameters for the previously unseen indexes
 
         n, m = self._get_PQ_dims()
         max_i, max_j = self._max_Xij(X)
@@ -172,34 +199,12 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
             self.intercepts_[2] = np.append(self.intercepts_[2], np.zeros(new_m))
 
 
-    def _check_param_dims(self, X):
-        
-        if self.intercepts_ is None or self.P_ is None or self.Q_ is None:
-            raise ValueError('Parameters were not initialized yet')
-        
-        n, m = self._get_PQ_dims()
-        max_i, max_j = self._max_Xij(X)
-
-        if n < max_i or m < max_j:
-            raise ValueError('X contains new indexes')
-            
-        if len(self.intercepts_[1]) < max_i or len(self.intercepts_[2]) < max_j:
-            raise ValueError('X contains new indexes')
-    
-    
-    def _check_indexes(self, X):
-        
-        if not np.all(X >= 0):
-            raise ValueError('Indexes need to be non-negative')
-
-        if not np.all(np.isfinite(X)):
-            raise ValueError('Indexes need to be finite')
-
-        if not X.dtype in ('int', 'int32', 'int64'):
-            raise ValueError('Indexes need to be integers')
-    
-    
     def _encode_ij(self, X, update = True):
+
+        # Encode and update the indexes
+        # If update=True, the indexes are updated when
+        # encountering previously unseen indexes.
+
         for c in (0, 1):
             if update:
                 self.encoders_[c].fit(X[:, c])
@@ -264,11 +269,8 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
     
     def _sdg_step(self, x, y):
         
-        """SGD step
-
-        Single step of Stochastic Grandient Descent that computes
-        the mu, bi, bj, p, q parameters using data x (indexes), y (value).
-        """
+        # Single step of stochastic grandient descent using single
+        # data "point" (a row): x (two indexes), y (numeric value).
         
         mu, bi, bj = self.intercepts_
         i, j = x
@@ -295,11 +297,11 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
         Parameters
         ----------
         
-        X : {array-like, sparse matrix}, shape (n_samples, n_features)
-            Subset of training data
+        X : array, shape (n_samples, 2)
+            Subset of training data.
             
         y : numpy array of shape (n_samples,)
-            Subset of target values
+            Subset of target values.
             
         Returns
         -------
@@ -310,6 +312,8 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
         
         X, y = check_X_y(X, y, y_numeric = True, ensure_2d = True,
                          force_all_finite = True)
+        
+        # assume first two columns as indexes, ignore others
         X = X[:, :2]
         
         if self.dynamic_indexes:
@@ -324,14 +328,13 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
         if self.dynamic_indexes:
             self._expand_param(X)
         
-        self._check_param_dims(X)
+        self._check_param(X)
         
+        # update mu intercept using moving average
         if self.fit_intercepts:
             self.intercepts_[0] = (self.intercepts_[0] * self.N_ + np.sum(y)) / (self.N_ + X.shape[0])
         
         self.N_ += X.shape[0]
-        n_iter = int(X.shape[0] * self.n_epoch)
-        self.n_iter_ += n_iter
         
         for _ in range(self.n_epoch):
             for row in range(X.shape[0]):
@@ -351,11 +354,11 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
         Parameters
         ----------
         
-        X : {array-like, sparse matrix}, shape (n_samples, n_features)
-            Subset of training data
+        X : array, shape (n_samples, 2)
+            Subset of training data.
             
         y : numpy array of shape (n_samples,)
-            Subset of target values
+            Subset of target values.
         
         Returns
         -------
@@ -378,7 +381,7 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
         Parameters
         ----------
         
-        X : {array-like, sparse matrix}, shape (n_samples, n_features)
+        X : array, shape (n_samples, 2)
         
         Returns
         -------
@@ -392,7 +395,7 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
             X = self._encode_ij(X, update = False)
             
         self._check_indexes(X)
-        self._check_param_dims(X)
+        self._check_param(X)
         
         mu, bi, bj = self.intercepts_
         yhat = np.empty(X.shape[0])
