@@ -116,6 +116,32 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
         self.N_ = self.n_iter_ = None
         self.encoders_ = [OnlineIndexer(), OnlineIndexer()]
         self.N_ = self.n_iter_ = 0
+
+    
+    def init_param(self, n, m):
+        
+        """Initialise the parameters
+        
+        The mu, bi, bj parameters are initialised with zeros, while
+        P, Q are initialized randomly using values drawn from
+        normal distribution parametrized by mu_init and sd_init.
+        
+        Notice that this initialization would be respected only
+        when warm_start = True, or using partial_fit().
+        
+        Parameters
+        ----------
+        n : int
+            First dimension of the factorized matrix.
+            
+        m : int
+            Second dimension of the factorized matrix.
+        
+        """
+                
+        self.P_ = np.random.normal(self.init_mean, self.init_sd, size = (n, self.d))
+        self.Q_ = np.random.normal(self.init_mean, self.init_sd, size = (self.d, m))
+        self.intercepts_ = [0.0, np.zeros(n), np.zeros(m)]
     
         
     def _max_Xij(self, X):
@@ -179,32 +205,6 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
                 self.encoders_[c].fit(X[:, c])
             X[:, c] = self.encoders_[c].transform(X[:, c])
         return X
-    
-    
-    def init_param(self, n, m):
-        
-        """Initialise the parameters
-        
-        The mu, bi, bj parameters are initialised with zeros, while
-        P, Q are initialized randomly using values drawn from
-        normal distribution parametrized by mu_init and sd_init.
-        
-        Notice that this initialization would be respected only
-        when warm_start = True, or using partial_fit().
-        
-        Parameters
-        ----------
-        n : int
-            First dimension of the factorized matrix.
-            
-        m : int
-            Second dimension of the factorized matrix.
-        
-        """
-                
-        self.P_ = np.random.normal(self.init_mean, self.init_sd, size = (n, self.d))
-        self.Q_ = np.random.normal(self.init_mean, self.init_sd, size = (self.d, m))
-        self.intercepts_ = [0.0, np.zeros(n), np.zeros(m)]
 
 
     def delete_index(self, index, axis):
