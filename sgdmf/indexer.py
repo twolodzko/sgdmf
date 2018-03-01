@@ -24,11 +24,11 @@ class OnlineIndexer(object):
     --------
     >>> keys = ['d', 'c', 'a', 'd', 'a', 'a', 'e']
     >>> idx = OnlineIndexer()
-    >>> idx.transform(keys)
+    >>> idx.fit_transform(keys)
     [2, 1, 0, 2, 0, 0, 3]
-    >>> idx.transform(['a', 'z'])
+    >>> idx.fit_transform(['a', 'z'])
     [0, 4]
-    >>> idx.transform(['a', 'b', 'c'])
+    >>> idx.fit_transform(['a', 'b', 'c'])
     [0, 5, 1]
     >>> idx.reindex()
     <__main__.OnlineIndexer at 0x7fb0a7d925f8>

@@ -4,7 +4,7 @@ from __future__ import print_function
 import numpy as np
 
 from sklearn.base import BaseEstimator, RegressorMixin
-from sklearn.utils import check_X_y
+from sklearn.utils import check_X_y, shuffle
 from sklearn.metrics import r2_score
 
 from .indexer import OnlineIndexer
@@ -18,8 +18,9 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
     bj is (1, m) array, P and Q are matrices of shapes (n, n_components) and (n_components, m)
     using stochastic gradient descent.
 
-    The dataset is processed as-is, the rows are not shuffled, so it may be worth shuffling
-    the data in advance to fitting the model (e.g. using sklearn.utils.shuffle).
+    The dataset is processed as-is, notice that by default the rows are *not* shuffled, so it
+    may be worth setting shuffle=True, or shuffling the data in advance to fitting the model
+    (e.g. using sklearn.utils.shuffle).
     
     Parameters
     ----------
@@ -29,7 +30,7 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
         have (n, n_components) and (n_components, m) shapes subsequently.
     
     n_epoch : int, default : 5
-        Number of training epochs, number of iterations is n_samples * n_epoch.
+        Number of training epochs, the actual number of iterations is n_samples * n_epoch.
     
     learning_rate : float, default : 0.005
         Learning rate parameter.
@@ -50,15 +51,19 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
     dynamic_indexes : bool, default : True
         As new indexes occur, expand the model for those indexes (change dimensions of bi, bj, P, Q).
         If set to False, if new index will occure during partial_fit(), it would result in an error.
+
+    shuffle : bool, default : False
+        Whether or not the training data should be shuffled before each epoch.
         
     warm_start : bool, optional
         When set to True, reuse the solution of the previous call to fit as initialization,
         otherwise, just erase the previous solution.
 
     random_state : int, RandomState instance or None, optional (default=None)
-        The seed of the pseudo random number generator to use when shuffling the data. If int, random_state
-        is the seed used by the random number generator; If RandomState instance, random_state is the random
-        number generator; If None, the random number generator is the RandomState instance used by np.random.
+        The seed of the pseudo random number generator to use when shuffling the data. If int,
+        random_state is the seed used by the random number generator; If RandomState instance,
+        random_state is the random number generator; If None, the random number generator is
+        the RandomState instance used by np.random.
 
     Attributes
     ----------
@@ -87,8 +92,8 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
     
     def __init__(self, n_components = 100, n_epoch = 5, learning_rate = 0.005,
                  regularization = 0.02, init_mean = 0.0, init_sd = 0.1,
-                 fit_intercepts = True, dynamic_indexes = True, warm_start = False,
-                 random_state = None):
+                 fit_intercepts = True, dynamic_indexes = True, shuffle = False,
+                 warm_start = False, random_state = None):
         
         self.d = n_components
         self.n_epoch = n_epoch
@@ -98,10 +103,11 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
         self.init_sd = init_sd
         self.fit_intercepts = fit_intercepts
         self.dynamic_indexes = dynamic_indexes
+        self.shuffle = shuffle
         self.warm_start = warm_start
         self.random_state = random_state
 
-        # initialise parameters with empty values
+        # initialize empty parameters
         self._reset_param()
         
             
@@ -118,7 +124,7 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
         
         """Initialize the parameters
         
-        The mu, bi, bj parameters are initialised with zeros, while
+        The mu, bi, bj parameters are initialized with zeros, while
         P, Q are initialized randomly using values drawn from
         normal distribution parametrized by mu_init and sd_init.
         
@@ -225,7 +231,7 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
         index : int
             Index of the element to be removed.
             
-        axis : int (0, 1)
+        axis : 0 or 1
             Axis of the element to be removed.
         """
 
@@ -337,8 +343,10 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
         self.N_ += X.shape[0]
         
         for _ in range(self.n_epoch):
+            if self.shuffle:
+                X, y = shuffle(X, y)
             for row in range(X.shape[0]):
-                self._sdg_step(X[row, :2], y[row])
+                self._sdg_step(X[row, :], y[row])
         
         return self
     
@@ -367,7 +375,7 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
             
         """
 
-        # reset parameters so NOT to conduct partial_fit()
+        # reset parameters, so NOT to conduct partial_fit()
         if not self.warm_start:
             self._reset_param()
         

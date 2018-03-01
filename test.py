@@ -68,6 +68,10 @@ if __name__ == "__main__":
 
     assert mf.score(X, y) > 0.99
 
+    # shuffle=True works properly
+    mf = MatrixFactorizer(n_components = 2, n_epoch = 1000, shuffle = True)
+    mf.partial_fit(X, y)
+    assert mf.score(X, y) > 0.99
 
     mf = MatrixFactorizer(n_components = 2, n_epoch = 1000, warm_start = True)
     mf.init_param(5, 6)
