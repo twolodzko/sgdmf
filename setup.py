@@ -11,6 +11,7 @@ setup(
     description = 'Matrix factorization using stochastic gradient descent.',
     install_requires = [
         "numpy>=1.12.1",
-        "scikit-learn>=0.19.1"
+        "scikit-learn>=0.19.1",
+        "tqdm>=4.19.6"
     ],
 )

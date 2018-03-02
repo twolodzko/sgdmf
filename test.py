@@ -135,8 +135,10 @@ if __name__ == "__main__":
     old_values = mf.encoders_[0].values()
     old_keys = mf.encoders_[0].keys()
 
+    seq_values = [i for i in range(len(old_values))]
+
     # are not sorted
-    assert np.all(old_values != [i for i in range(len(old_values))])
+    assert not np.all(old_values == seq_values)
 
     idx_i = np.array(mf.encoders_[0].keys()).argsort()
     sorted_P = mf.P_[idx_i, :]
@@ -151,7 +153,7 @@ if __name__ == "__main__":
     new_values = mf.encoders_[0].values()
 
     # are sorted
-    assert np.all(new_values == [i for i in range(len(old_values))])
+    assert np.all(new_values == seq_values)
 
     # sorting parameters works
     assert np.all(mf.P_ == sorted_P)

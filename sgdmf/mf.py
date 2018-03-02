@@ -2,10 +2,10 @@
 from __future__ import print_function
 
 import numpy as np
+from tqdm import tqdm
 
 from sklearn.base import BaseEstimator, RegressorMixin
-from sklearn.utils import check_X_y, shuffle
-from sklearn.metrics import r2_score
+from sklearn.utils import check_X_y, check_array, shuffle
 
 from .indexer import OnlineIndexer
 
@@ -65,6 +65,9 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
         random_state is the random number generator; If None, the random number generator is
         the RandomState instance used by np.random.
 
+    progress : bool, default : False
+        Show progress bar.
+
     Attributes
     ----------
     
@@ -93,7 +96,7 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
     def __init__(self, n_components = 100, n_epoch = 5, learning_rate = 0.005,
                  regularization = 0.02, init_mean = 0.0, init_sd = 0.1,
                  fit_intercepts = True, dynamic_indexes = True, shuffle = False,
-                 warm_start = False, random_state = None):
+                 warm_start = False, random_state = None, progress = False):
         
         self.d = n_components
         self.n_epoch = n_epoch
@@ -106,6 +109,7 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
         self.shuffle = shuffle
         self.warm_start = warm_start
         self.random_state = random_state
+        self.progress = progress
 
         # initialize empty parameters
         self._reset_param()
@@ -167,10 +171,10 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
         max_i, max_j = self._max_Xij(X)
 
         if n < max_i or m < max_j:
-            raise ValueError('X contains new indexes')
+            raise KeyError('X contains new indexes')
             
         if len(self.intercepts_[1]) < max_i or len(self.intercepts_[2]) < max_j:
-            raise ValueError('X contains new indexes')
+            raise KeyError('X contains new indexes')
     
 
     def _check_indexes(self, X):
@@ -315,10 +319,10 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
         self : returns an instance of self.
         
         """
-        
+
         X, y = check_X_y(X, y, y_numeric = True, ensure_2d = True,
-                         force_all_finite = True)
-        
+                         force_all_finite = True, dtype = 'int32')
+
         # assume first two columns as indexes, ignore others
         X = X[:, :2]
         
@@ -342,10 +346,10 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
         
         self.N_ += X.shape[0]
         
-        for _ in range(self.n_epoch):
+        for _ in tqdm(range(self.n_epoch), disable = not self.progress):
             if self.shuffle:
                 X, y = shuffle(X, y)
-            for row in range(X.shape[0]):
+            for row in tqdm(range(X.shape[0]), disable = not self.progress):
                 self._sdg_step(X[row, :], y[row])
         
         return self
@@ -398,6 +402,12 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
            Predicted target values per element in X.
            
         """
+
+        X = check_array(X, ensure_2d = True, force_all_finite = True,
+                        dtype = 'int32')
+
+        # assume first two columns as indexes, ignore others
+        X = X[:, :2]
         
         if self.dynamic_indexes:
             X = self._encode_ij(X, update = False)
@@ -408,8 +418,8 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
         mu, bi, bj = self.intercepts_
         yhat = np.empty(X.shape[0])
         
-        for row in range(X.shape[0]):
-            i, j = X[row, :2]
+        for row in tqdm(range(X.shape[0]), disable = not self.progress):
+            i, j = X[row, :]
             p = self.P_[i, :]
             q = self.Q_[:, j]
             yhat[row] = mu + bi[i] + bj[j] + np.dot(p, q)

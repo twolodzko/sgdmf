@@ -2,10 +2,10 @@
 from __future__ import print_function
 
 import numpy as np
-from collections import defaultdict, Iterable
+from collections import Iterable
 
 
-def get_iterable(x):
+def lst(x):
     if isinstance(x, Iterable):
         return x
     else:
@@ -40,7 +40,7 @@ class OnlineIndexer(object):
     
     def __init__(self):
         
-        self.classes_ = defaultdict(lambda : None)
+        self.classes_ = dict()
         self.last_index_ = None
     
     
@@ -71,12 +71,12 @@ class OnlineIndexer(object):
         self : returns an instance of self.
         """
         
-        new_keys = [k for k in np.unique(y) if k not in self.classes_]
+        new_keys = lst([k for k in np.unique(y) if k not in self.classes_])
         if len(new_keys):
-            new_keys = get_iterable(new_keys)
             for v, k in enumerate(new_keys, start = self.next_index()):
                 self.classes_[k] = v
             self.last_index_ = v
+        
         return self
     
     
@@ -94,7 +94,7 @@ class OnlineIndexer(object):
         array : indexes for the keys.
         """
         
-        return [self.classes_[k] for k in get_iterable(y)]
+        return lst([self.classes_[k] for k in lst(y)])
 
 
     def fit_transform(self, y):
@@ -158,7 +158,7 @@ class OnlineIndexer(object):
         self : returns an instance of self.
         """
         
-        for k in get_iterable(keys):
+        for k in lst(keys):
             del self.classes_[k]
         
         return self
