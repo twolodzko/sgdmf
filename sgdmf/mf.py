@@ -34,10 +34,6 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
     
     learning_rate : float, default : 0.005
         Learning rate parameter.
-
-    decay : float (>0), default : None
-        Learning rate decay, if decay is non-zero, then the learning rate is
-        learning_rate * 1/(1 + decay * epoch_number).
     
     regularization : float, default : 0.02
         Regularization parameter.
@@ -99,14 +95,13 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
     
     
     def __init__(self, n_components = 100, n_epoch = 5, learning_rate = 0.005,
-                 decay = None, regularization = 0.02, init_mean = 0.0, init_sd = 0.1,
+                 regularization = 0.02, init_mean = 0.0, init_sd = 0.1,
                  fit_intercepts = True, dynamic_indexes = True, shuffle = False,
                  warm_start = False, random_state = None, progress = 0):
         
         self.d = n_components
         self.n_epoch = n_epoch
         self.learning_rate = learning_rate
-        self.decay = decay
         self.regularization = regularization
         self.init_mean = init_mean
         self.init_sd = init_sd
@@ -127,7 +122,7 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
 
         self.intercepts_ = self.P_ = self.Q_ = None
         self.encoders_ = [OnlineIndexer(), OnlineIndexer()]
-        self.N_ = self.epoch_number_ = 0
+        self.N_ = 0
 
     
     def init_param(self, n, m):
@@ -353,9 +348,6 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
         self.N_ += X.shape[0]
         
         for _ in tqdm(range(self.n_epoch), disable = self.progress <= 0):
-            self.epoch_number_ += 1
-            if self.decay:
-                self.learning_rate *= 1./(1. + self.decay * self.epoch_number_)
             if self.shuffle:
                 X, y = shuffle(X, y)
             for row in tqdm(range(X.shape[0]), disable = self.progress <= 1):
