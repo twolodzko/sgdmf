@@ -84,15 +84,24 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
     Examples
     --------
 
+    >>> import numpy as np
+    >>> import pandas as pd
     >>> from sgdmf import MatrixFactorizer
+    >>> data = pd.DataFrame({
+        'user_id' : [0,0,1,1,2,2],
+        'movie_id' : [0,1,2,0,1,2],
+        'rating' : [1,1,2,2,3,3]
+    })
     >>> X = data[['user_id', 'movie_id']]
     >>> y = data['rating']
-    >>> mf = MatrixFactorizer()
+    >>> mf = MatrixFactorizer(n_components = 2, n_epoch = 100)
     >>> mf.partial_fit(X, y)
     MatrixFactorizer(dynamic_indexes=True, fit_intercepts=True, init_mean=0.0,
-         init_sd=0.1, learning_rate=0.005, n_components=100, n_epoch=5,
+         init_sd=0.1, learning_rate=0.005, n_components=2, n_epoch=100,
          progress=0, random_state=None, regularization=0.02, shuffle=False,
          warm_start=False)
+    >>> mf.score(X, y)
+    0.8681700656218548
     
     References
     ----------
