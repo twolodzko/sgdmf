@@ -134,7 +134,7 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
         normal distribution parametrized by mu_init and sd_init.
         
         Notice that this initialization would be respected only
-        when warm_start = True, or using partial_fit().
+        when warm_start=True, or when using partial_fit().
         
         Parameters
         ----------
@@ -258,8 +258,8 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
 
         """Order the parameters by indexes
 
-        Parameters are ordered according to indexes, e.g. when after partial_fit
-        new indexes occured.
+        Parameters are ordered according to indexes, this function can be used
+        when using partial_fit() has introduced new indexes.
         """
 
         if self.dynamic_indexes:
@@ -361,8 +361,8 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
         """Fit the model according to the given training data.
         
         Fit the model from the scratch. The dimensions of the bi, bj, P, Q
-        parameters are infered from the data, the parameters are initialized
-        randomly.
+        parameters are infered from the data, the parameters are
+        initialized using the init_param() function.
         
         Parameters
         ----------
