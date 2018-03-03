@@ -1,5 +1,5 @@
 
-This package implements MatrixFactorizer object that can be used for matrix
+This package implements MatrixFactorizer class that can be used for matrix
 factorization using stochastic gradient descent (see Koren et al, 2009).
 It aims at providing simple interface and enabling user to fit the model
 in online fashion.
@@ -35,7 +35,7 @@ Since MatrixFactorizer is fitted using stochastic gradient descent,
 it is possible to train model using online learning in batches
 (or case by case), using the partial_fit() function. MatrixFactorizer
 is able to adapt to changes in the data (new indexes) using the 
-OnlineFactorizer class.
+OnlineFactorizer class methods.
 
 References
 ----------
