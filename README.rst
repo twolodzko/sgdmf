@@ -17,7 +17,7 @@ The data is assumed to come in the long format as below:
 what is equivalent to storing the ratings in the user_id * movie_id matrix. 
 
 The MatrixFactorizer class uses interface similar to the classes in the
-sklearn package. The typical workflow includes pre-processing, cleaning,
+sklearn package. The typical workflow includes pre-processing, cleaning, etc.
 and then spliting the data into arrays X for indexes and y for the values,
 after that, the MatrixFactorizer model an be fitted.
 
