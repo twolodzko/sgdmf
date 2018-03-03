@@ -80,6 +80,19 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
     
     Q_ : array, shape (n_components, m)
         Latent matrix.
+
+    Examples
+    --------
+
+    >>> from sgdmf import MatrixFactorizer
+    >>> X = data[['user_id', 'movie_id']]
+    >>> y = data['rating']
+    >>> mf = MatrixFactorizer()
+    >>> mf.partial_fit(X, y)
+    MatrixFactorizer(dynamic_indexes=True, fit_intercepts=True, init_mean=0.0,
+         init_sd=0.1, learning_rate=0.005, n_components=100, n_epoch=5,
+         progress=0, random_state=None, regularization=0.02, shuffle=False,
+         warm_start=False)
     
     References
     ----------
@@ -99,7 +112,7 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
                  fit_intercepts = True, dynamic_indexes = True, shuffle = False,
                  warm_start = False, random_state = None, progress = 0):
         
-        self.d = n_components
+        self.n_components = n_components
         self.n_epoch = n_epoch
         self.learning_rate = learning_rate
         self.regularization = regularization
@@ -145,9 +158,10 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
             Second index of the factorized matrix.
         
         """
-                
-        self.P_ = np.random.normal(self.init_mean, self.init_sd, size = (n, self.d))
-        self.Q_ = np.random.normal(self.init_mean, self.init_sd, size = (self.d, m))
+        
+        d = self.n_components
+        self.P_ = np.random.normal(self.init_mean, self.init_sd, size = (n, d))
+        self.Q_ = np.random.normal(self.init_mean, self.init_sd, size = (d, m))
         self.intercepts_ = [0.0, np.zeros(n), np.zeros(m)]
     
         
@@ -158,7 +172,8 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
     def _get_PQ_dims(self):
         n = self.P_.shape[0]
         m = self.Q_.shape[1]
-        return n, m
+        d = self.n_components
+        return n, m, d
 
 
     def _check_param(self, X):
@@ -168,7 +183,7 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
         if self.intercepts_ is None or self.P_ is None or self.Q_ is None:
             raise ValueError('Parameters were not initialized yet')
         
-        n, m = self._get_PQ_dims()
+        n, m, d = self._get_PQ_dims()
         max_i, max_j = self._max_Xij(X)
 
         if n < max_i or m < max_j:
@@ -179,6 +194,9 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
     
 
     def _check_indexes(self, X):
+
+        if X.shape[1] != 2:
+            raise ValueError('X needs to consist of exactly two columns')
         
         if not np.all(X >= 0):
             raise ValueError('Indexes need to be non-negative')
@@ -194,18 +212,18 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
 
         # Initialize the parameters for the previously unseen indexes
 
-        n, m = self._get_PQ_dims()
+        n, m, d = self._get_PQ_dims()
         max_i, max_j = self._max_Xij(X)
         
         if max_i > n:
             new_n = max_i - n
-            new_P = np.random.normal(self.init_mean, self.init_sd, size = (new_n, self.d))
+            new_P = np.random.normal(self.init_mean, self.init_sd, size = (new_n, d))
             self.P_ = np.append(self.P_, new_P, axis = 0)
             self.intercepts_[1] = np.append(self.intercepts_[1], np.zeros(new_n))
         
         if max_j > m:
             new_m = max_j - m
-            new_Q = np.random.normal(self.init_mean, self.init_sd, size = (self.d, new_m))
+            new_Q = np.random.normal(self.init_mean, self.init_sd, size = (d, new_m))
             self.Q_ = np.append(self.Q_, new_Q, axis = 1)
             self.intercepts_[2] = np.append(self.intercepts_[2], np.zeros(new_m))
 
@@ -324,7 +342,7 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
         X, y = check_X_y(X, y, y_numeric = True, ensure_2d = True,
                          force_all_finite = True, dtype = 'int32')
 
-        # assume first two columns as indexes, ignore others
+        # using only the first two columns as indexes
         X = X[:, :2]
         
         if self.dynamic_indexes:
@@ -407,7 +425,7 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
         X = check_array(X, ensure_2d = True, force_all_finite = True,
                         dtype = 'int32')
 
-        # assume first two columns as indexes, ignore others
+        # using only the first two columns as indexes)
         X = X[:, :2]
         
         if self.dynamic_indexes:
@@ -442,7 +460,7 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
            
         """
         
-        n, m = self._get_PQ_dims()
+        n, m, d = self._get_PQ_dims()
         
         if self.fit_intercepts:
             mu = self.intercepts_[0]
