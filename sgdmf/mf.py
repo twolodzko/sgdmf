@@ -181,8 +181,7 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
     def _get_PQ_dims(self):
         n = self.P_.shape[0]
         m = self.Q_.shape[1]
-        d = self.n_components
-        return n, m, d
+        return n, m
 
 
     def _check_param(self, X):
@@ -192,7 +191,7 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
         if self.intercepts_ is None or self.P_ is None or self.Q_ is None:
             raise ValueError('Parameters were not initialized yet')
         
-        n, m, d = self._get_PQ_dims()
+        n, m = self._get_PQ_dims()
         max_i, max_j = self._max_Xij(X)
 
         if n < max_i or m < max_j:
@@ -221,7 +220,8 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
 
         # Initialize the parameters for the previously unseen indexes
 
-        n, m, d = self._get_PQ_dims()
+        n, m = self._get_PQ_dims()
+        d = self.n_components
         max_i, max_j = self._max_Xij(X)
         
         if max_i > n:
@@ -469,7 +469,7 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
            
         """
         
-        n, m, d = self._get_PQ_dims()
+        n, m = self._get_PQ_dims()
         
         if self.fit_intercepts:
             mu = self.intercepts_[0]
