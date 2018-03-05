@@ -276,8 +276,8 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
 
         Parameters
         ----------
-        index : int
-            Index of the element to be removed.
+        index : array (n_indexes)
+            Indexes of the elements to be removed.
             
         axis : 0 or 1
             Axis of the element to be removed.
@@ -302,7 +302,7 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
         """Order the parameters by indexes
 
         Parameters are ordered according to indexes, this function can be used
-        when using partial_fit() has introduced new indexes.
+        after partial_fit() has introduced new indexes.
         """
 
         if self.dynamic_indexes:
@@ -319,6 +319,44 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
                 self.intercepts_[c+1] = self.intercepts_[c+1][order]
 
                 self.encoders_[c].reindex()
+
+
+    def profiles(self, index, axis):
+
+        """Get the latent profiles
+
+        Get indices of the P or Q matrix.
+
+        Parameters
+        ----------
+        index : array (n_indexes) or None
+            Index of the element to be returned. If index is None,
+            then entire P or Q matrix is returned.
+        
+        axis : 0 or 1
+            Axis of the index.
+        
+        Returns
+        -------
+
+        array, shape (n_indexes, n_components)
+           Latent profile for the given index.
+
+        """
+
+        if axis not in (0, 1):
+            raise ValueError('Incorrect axis parameter')
+
+        if axis == 0:
+            if index is None:
+                return self.P_
+            idx = self.encoders_[0].transform(index)
+            return self.P_[idx, :]
+        else:
+            if index is None:
+                return self.Q_
+            idx = self.encoders_[1].transform(index)
+            return self.Q_[:, idx].T
 
     
     def _sdg_step(self, x, y):
