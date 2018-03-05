@@ -14,9 +14,15 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
     
     """Matrix Factorizer
     
-    Factorize the (n, m) matrix into mu + bi + bj + P*Q, where bi is (1, n) array,
-    bj is (1, m) array, P and Q are matrices of shapes (n, n_components) and (n_components, m)
-    using stochastic gradient descent.
+    Factorize the matrix R (n, m) into P (n, n_components) and Q (n_components, m) matrices,
+    using stochastic gradient descent. Additional intercepts mu, bi, bj can be included,
+    leading to the following model
+
+        R[i,j] = mu + bi[i] + bj[j] + P[i,] * Q[,j]
+
+    MatrixFactorizer assumes matrix R to be stored in a "long" format, in two arrays X (n_samples, 2)
+    and y (n_samples). The i, j indexes are stored in the rows of X and the R[i,j] values are
+    stored in accompanying indices of y (i.e. y[k] = R[i,j], X[k, 0] = i, and X[k, 1] = j).
 
     The dataset is processed as-is, notice that by default the rows are *not* shuffled, so it
     may be worth setting shuffle=True, or shuffling the data in advance to fitting the model
