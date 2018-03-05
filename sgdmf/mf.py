@@ -276,7 +276,7 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
 
         Parameters
         ----------
-        index : array (n_indexes)
+        index : array (n_indexes,)
             Indexes of the elements to be removed.
             
         axis : 0 or 1
@@ -329,9 +329,9 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
 
         Parameters
         ----------
-        index : array (n_indexes) or None
-            Index of the element to be returned. If index is None,
-            then entire P or Q matrix is returned.
+        index : array (n_indexes,) or None
+            Index of the element to be returned. If None, then entire
+            P or Q matrix is returned.
         
         axis : 0 or 1
             Axis of the index.
