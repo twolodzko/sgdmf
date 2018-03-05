@@ -22,7 +22,7 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
 
     MatrixFactorizer assumes matrix R to be stored in a "long" format, in two arrays X (n_samples, 2)
     and y (n_samples). The i, j indexes are stored in the rows of X and the R[i,j] values are
-    stored in accompanying indices of y (i.e. y[k] = R[i,j], X[k, 0] = i, and X[k, 1] = j).
+    stored in accompanying indices of y (i.e. y[k] = R[i,j], X[k,0] = i, and X[k,1] = j).
 
     The dataset is processed as-is, notice that by default the rows are *not* shuffled, so it
     may be worth setting shuffle=True, or shuffling the data in advance to fitting the model
