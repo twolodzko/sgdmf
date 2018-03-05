@@ -100,14 +100,24 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
     })
     >>> X = data[['user_id', 'movie_id']]
     >>> y = data['rating']
-    >>> mf = MatrixFactorizer(n_components = 2, n_epoch = 100)
+    >>> mf = MatrixFactorizer(n_components = 2, n_epoch = 100, random_state = 42)
     >>> mf.partial_fit(X, y)
     MatrixFactorizer(dynamic_indexes=True, fit_intercepts=True, init_mean=0.0,
-         init_sd=0.1, learning_rate=0.005, n_components=2, n_epoch=100,
-         progress=0, random_state=None, regularization=0.02, shuffle=False,
-         warm_start=False)
+        init_sd=0.1, learning_rate=0.005, n_components=2, n_epoch=100,
+        progress=0, random_state=42, regularization=0.02, shuffle=False,
+        warm_start=False)
     >>> mf.score(X, y)
-    0.8681700656218548
+    0.8724592718646421
+    >>> mf.partial_fit(X, y)
+    MatrixFactorizer(dynamic_indexes=True, fit_intercepts=True, init_mean=0.0,
+        init_sd=0.1, learning_rate=0.005, n_components=2, n_epoch=100,
+        progress=0, random_state=42, regularization=0.02, shuffle=False,
+        warm_start=False)
+    >>> mf.score(X, y)
+    0.9641971102264503
+    >>> mf.predict(X)
+    array([1.04945549, 1.22171768, 2.14456295, 1.85838361, 2.78110453,
+        2.94767306])
     
     References
     ----------
