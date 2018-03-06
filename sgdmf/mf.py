@@ -329,7 +329,7 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
 
         Parameters
         ----------
-        index : array (n_indexes,) or None
+        index : array (n_samples,) or None
             Index of the element to be returned. If None, then entire
             P or Q matrix is returned.
         
@@ -339,7 +339,7 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
         Returns
         -------
 
-        array, shape (n_indexes, n_components)
+        array, shape (n_samples, n_components)
            Latent profile for the given index.
 
         """
