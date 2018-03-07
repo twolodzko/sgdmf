@@ -52,7 +52,7 @@ if __name__ == "__main__":
     y = np.array([1,1,2,2,3,3])
 
     mf = MatrixFactorizer(n_components = 2, n_epoch = 1000)
-    mf.init_param(5, 6)
+    mf.init_param(shape = (5, 6))
 
     assert mf.P_.shape[0] == 5
     assert mf.intercepts_[1].shape[0] == 5
@@ -74,7 +74,7 @@ if __name__ == "__main__":
     assert mf.score(X, y) > 0.99
 
     mf = MatrixFactorizer(n_components = 2, n_epoch = 1000, warm_start = True)
-    mf.init_param(5, 6)
+    mf.init_param(shape = (5, 6))
 
     assert mf.P_.shape[0] == 5
     assert mf.intercepts_[1].shape[0] == 5

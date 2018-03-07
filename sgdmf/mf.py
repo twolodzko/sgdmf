@@ -163,7 +163,7 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
         self.N_ = 0
 
     
-    def init_param(self, n, m):
+    def init_param(self, shape = None, indexes = None):
         
         """Initialize the parameters
         
@@ -176,22 +176,29 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
         
         Parameters
         ----------
-        n : int
-            First index of the factorized matrix.
-            
-        m : int
-            Second index of the factorized matrix.
+        
+        shape : tuple (int, int)
+
+        indexes : list (array, array)
         
         """
+
+        if indexes is not None:
+            if shape is not None:
+                raise ValueError("Use shape or indexes, but not both")
+            if self.dynamic_indexes:
+                for c in (0, 1):
+                    indexes[c] = self.encoders_[c].fit_transform(indexes[c])
+            n = np.max(indexes[0])
+            m = np.max(indexes[1])
+
+        if shape is not None:
+            n, m = shape
         
         d = self.n_components
         self.P_ = np.random.normal(self.init_mean, self.init_sd, size = (n, d))
         self.Q_ = np.random.normal(self.init_mean, self.init_sd, size = (d, m))
         self.intercepts_ = [0.0, np.zeros(n), np.zeros(m)]
-    
-        
-    def _max_Xij(self, X):
-        return X.max(axis = 0) + 1
     
     
     def _get_PQ_dims(self):
@@ -208,7 +215,7 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
             raise ValueError('Parameters were not initialized yet')
         
         n, m = self._get_PQ_dims()
-        max_i, max_j = self._max_Xij(X)
+        max_i, max_j = X.max(axis = 0) + 1
 
         if n < max_i or m < max_j:
             raise KeyError('X contains new indexes')
@@ -238,7 +245,7 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
 
         n, m = self._get_PQ_dims()
         d = self.n_components
-        max_i, max_j = self._max_Xij(X)
+        max_i, max_j = X.max(axis = 0) + 1
         
         if max_i > n:
             new_n = max_i - n
@@ -441,8 +448,8 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
         self._check_indexes(X)
         
         if self.intercepts_ is None and self.P_ is None and self.Q_ is None:
-            n, m = self._max_Xij(X)
-            self.init_param(n, m)
+            n, m = X.max(axis = 0) + 1
+            self.init_param(shape = (n, m))
         
         if self.dynamic_indexes:
             self._expand_param(X)
