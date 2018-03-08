@@ -2,7 +2,7 @@
 from __future__ import print_function
 
 import numpy as np
-from .indexer import OnlineIndexer
+from .indexer import OnlineIndexer, lst
 
 
 class ParamMatrix(object):
@@ -11,58 +11,35 @@ class ParamMatrix(object):
 
         self.init_mean = init_mean
         self.init_sd = init_sd
-        self.shape = np.array(shape, dtype=int)
+        self.shape = np.array(shape, dtype = int)
         self.mu = 0.0
-        self.bi = np.zeros(self.shape[0])
-        self.bj = np.zeros(self.shape[1])
-        self.Pi = np.random.normal(self.init_mean, self.init_sd, size = self.shape[[0, 2]])
-        self.Qj = np.random.normal(self.init_mean, self.init_sd, size = self.shape[[1, 2]])
+        n, m, d = shape
+        self.bi = np.zeros(n)
+        self.bj = np.zeros(m)
+        self.Pi = np.random.normal(self.init_mean, self.init_sd, size = (n, d))
+        self.Qj = np.random.normal(self.init_mean, self.init_sd, size = (m, d))
 
 
-    def get(self, index = None, axis = None):
+    def get(self, index):
+        i, j = index
+        return self.mu, self.bi[i], self.bj[j], self.Pi[i, :], self.Qj[j, :]
 
-        if axis is None:
-            
-            i, j = index
-            return self.mu, self.bi[i], self.bj[j], self.Pi[i, :], self.Qj[j, :]
-
-        else:
-
-            if axis not in (-1, 0, 1):
-                raise ValueError('Incorrect axis parameter')
-
-            if axis == 0:
-                return self.bi[index], self.Pi[index, :]
-            elif axis == 1: 
-                return self.bj[index], self.Qj[index, :]
-            else:
-                return self.mu
+    
+    def get_param(self, param):
+        return getattr(self, param)
 
 
-    def set(self, value, index = None, axis = None):
+    def set(self, value, index):
+        i, j = index
+        self.mu = value[0]
+        self.bi[i] = value[1]
+        self.bj[j] = value[2]
+        self.Pi[i, :] = value[3]
+        self.Qj[j, :] = value[4]
 
-        if axis is None:
-            
-            i, j = index
-            self.mu = value[0]
-            self.bi[i] = value[1]
-            self.bj[j] = value[2]
-            self.Pi[i, :] = value[3]
-            self.Qj[j, :] = value[4]
 
-        else:
-
-            if axis not in (-1, 0, 1):
-                raise ValueError('Incorrect axis parameter')
-
-            if axis == 0:
-                self.bi[index] = value[0]
-                self.Pi[index, :] = value[1]
-            elif axis == 1: 
-                self.bj[index] = value[0]
-                self.Qj[index, :] = value[1]
-            else:
-                self.mu = value
+    def set_param(self, param, value):
+        setattr(self, param, value)
     
 
     def expand(self, by, axis):
@@ -70,14 +47,16 @@ class ParamMatrix(object):
         if axis not in (0, 1):
             raise ValueError('Incorrect axis parameter')
 
-        if axis == 1:
+        d = self.shape[2]
+
+        if axis == 0:
             self.bi = np.append(self.bi, np.zeros(by))
             self.Pi = np.append(self.Pi, np.random.normal(self.init_mean, self.init_sd,
-                                                          size = (by, self.shape[2])), axis = 0)
+                                                          size = (by, d)), axis = 0)
         else:
             self.bj = np.append(self.bj, np.zeros(by))
             self.Qj = np.append(self.Qj, np.random.normal(self.init_mean, self.init_sd,
-                                                          size = (by, self.shape[2])), axis = 0)
+                                                          size = (by, d)), axis = 0)
 
 
     def drop(self, index, axis):
@@ -107,28 +86,22 @@ class DynamMatrix(ParamMatrix):
         super(DynamMatrix, self).__init__((*shape, d), init_mean, init_sd)
 
 
-    def get(self, index = None, axis = None):
+    def get(self, index):
 
         if index is not None:
-            index = list(index)
             for c in (0, 1):
                 index[c] = self.encoders[c].transform(index[c])
-        
-        return super(DynamMatrix, self).get(index, axis)
+                
+        return super(DynamMatrix, self).get(index)
 
 
-    def set(self, value, index = None, axis = None):
+    def set(self, value, index):
 
-        if axis is None:
-            index = list(index)
+        if index is not None:
             for c in (0, 1):
-                index[c] = self.encoders[c].transform(index[c])
-        else:
-            if index is not None:
-                if axis in (0, 1):
-                    index = self.encoders[axis].fit_transform(index)
+                index[c] = self.encoders[c].fit_transform(index[c])
         
-        super(DynamMatrix, self).set(value, index, axis)
+        super(DynamMatrix, self).set(value, index)
 
 
     def expand(self, index, axis):
@@ -137,10 +110,10 @@ class DynamMatrix(ParamMatrix):
             raise ValueError('Incorrect axis parameter')
         
         prev_size = self.encoders[axis].size()
-        index = self.encoders[axis].fit_transform(index)
-        new_size = self.encoders[axis].size() - prev_size
+        self.encoders[axis].fit(index)
+        by = self.encoders[axis].size() - prev_size
 
-        super(DynamMatrix, self).expand(new_size, axis)
+        super(DynamMatrix, self).expand(by, axis)
 
 
     def drop(self, index, axis):

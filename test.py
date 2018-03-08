@@ -52,7 +52,13 @@ if __name__ == "__main__":
     y = np.array([1,1,2,2,3,3])
 
     mf = MatrixFactorizer(n_components = 2, n_epoch = 1000)
-    mf.init_param(shape = (5, 6))
+
+    init_idx = [
+        [x for x in range(5)],
+        [x for x in range(6)]
+    ] 
+
+    mf.init_param(indexes = init_idx)
 
     assert mf.params_.Pi.shape[0] == 5
     assert mf.params_.bi.shape[0] == 5
@@ -72,22 +78,6 @@ if __name__ == "__main__":
     mf = MatrixFactorizer(n_components = 2, n_epoch = 1000, shuffle = True)
     mf.partial_fit(X, y)
     assert mf.score(X, y) > 0.99
-
-    mf = MatrixFactorizer(n_components = 2, n_epoch = 1000, warm_start = True)
-    mf.init_param(shape = (5, 6))
-
-    assert mf.params_.Pi.shape[0] == 5
-    assert mf.params_.bi.shape[0] == 5
-    assert mf.params_.Qj.shape[0] == 6
-    assert mf.params_.bj.shape[0] == 6
-
-    mf.fit(X, y)
-
-    assert mf.params_.Pi.shape[0] == 5
-    assert mf.params_.bi.shape[0] == 5
-    assert mf.params_.Qj.shape[0] == 6
-    assert mf.params_.bj.shape[0] == 6
-
 
     ## Check if seeds work
 
