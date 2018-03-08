@@ -2,125 +2,140 @@
 from __future__ import print_function
 
 import numpy as np
-from .indexer import OnlineIndexer, lst
+from collections import Iterable
+
+def lst(x):
+    if isinstance(x, Iterable):
+        return x
+    else:
+        return (x,)
 
 
-class ParamMatrix(object):
+class ParamContainer(object):
 
-    def __init__(self, shape, init_mean = 0.0, init_sd = 0.1):
+    def __init__(self, shape = (0, 0, 0), mean = 0.0,
+                 sd = 0.1, dynamic = False):
 
-        self.init_mean = init_mean
-        self.init_sd = init_sd
-        self.shape = np.array(shape, dtype = int)
+        self.mean = mean
+        self.sd = sd
+        self.d = shape[2]
+        self.dynamic = dynamic
         self.mu = 0.0
         n, m, d = shape
-        self.bi = np.zeros(n)
-        self.bj = np.zeros(m)
-        self.Pi = np.random.normal(self.init_mean, self.init_sd, size = (n, d))
-        self.Qj = np.random.normal(self.init_mean, self.init_sd, size = (m, d))
+
+        if self.dynamic:
+            self.bi = dict()
+            self.bj = dict()
+            self.Pi = dict()
+            self.Qj = dict()
+        else:
+            self.bi = np.zeros(n)
+            self.bj = np.zeros(m)
+            self.Pi = np.random.normal(self.mean, self.sd, size = (n, d))
+            self.Qj = np.random.normal(self.mean, self.sd, size = (m, d))
 
 
-    def get(self, index):
-        i, j = index
-        return self.mu, self.bi[i], self.bj[j], self.Pi[i, :], self.Qj[j, :]
+    def get(self, index, initialize = False):
 
-    
-    def get_param(self, param):
-        return getattr(self, param)
+        mu = self.mu
+
+        if self.dynamic:
+
+            if initialize:
+
+                if index[0] not in self.bi:
+                    self.bi[index[0]] = 0.0
+                if index[1] not in self.bj:
+                    self.bj[index[1]] = 0.0
+                if index[0] not in self.Pi:
+                    self.Pi[index[0]] = np.random.normal(self.mean, self.sd, self.d)
+                if index[1] not in self.Qj:
+                    self.Qj[index[1]] = np.random.normal(self.mean, self.sd, self.d)
+
+            bi = self.bi[index[0]]
+            bj = self.bj[index[1]]
+            Pi = self.Pi[index[0]]
+            Qj = self.Qj[index[1]]
+
+        else:
+
+            if initialize:
+                
+                if index[0] >= self.bi.shape[0]:
+                    self.bi = np.append(self.bi, 0.0)
+                if index[1] >= self.bj.shape[0]:
+                    self.bj = np.append(self.bj, 0.0)
+                if index[0] >= self.Pi.shape[0]:
+                    rnd = np.random.normal(self.mean, self.sd, self.d)
+                    self.Pi = np.append(self.Pi, rnd, axis = 0)
+                if index[1] >= self.Qj.shape[0]:
+                    rnd = np.random.normal(self.mean, self.sd, self.d)
+                    self.Qj = np.append(self.Qj, rnd, axis = 0)
+
+            bi = self.bi[index[0]]
+            bj = self.bj[index[1]]
+            Pi = self.Pi[index[0], :]
+            Qj = self.Qj[index[1], :]
+
+        return mu, bi, bj, Pi, Qj
 
 
-    def set(self, value, index):
-        i, j = index
+    def get_param(self, param, index = None):
+
+        if index is None:
+            return getattr(self, param)
+        else:
+            out = []
+            for ix in lst(index):
+                out += [getattr(self, param)[ix]]
+            return np.array(out)
+
+
+    def set(self, index, value):
+
         self.mu = value[0]
-        self.bi[i] = value[1]
-        self.bj[j] = value[2]
-        self.Pi[i, :] = value[3]
-        self.Qj[j, :] = value[4]
+
+        if self.dynamic:
+            self.bi[index[0]] = value[1]
+            self.bj[index[1]] = value[2]
+            self.Pi[index[0]] = value[3]
+            self.Qj[index[1]] = value[4]
+        else:
+            self.bi[index[0]] = value[1]
+            self.bj[index[1]] = value[2]
+            self.Pi[index[0], :] = value[3]
+            self.Qj[index[1], :] = value[4]
 
 
     def set_param(self, param, value):
         setattr(self, param, value)
-    
+        
 
-    def expand(self, by, axis):
+    def size(self):
+        if self.dynamic:
+            assert len(self.bi) == len(self.Pi)
+            assert len(self.bj) == len(self.Qj)
+            return (len(self.Pi), len(self.Qj), self.d)
+        else:
+            assert self.bi.shape[0] == self.Pi.shape[0]
+            assert self.bj.shape[0] == self.Qj.shape[0]
+            return (self.Pi.shape[0], self.Qj.shape[0], self.d)
+
+
+    def drop(self, index, axis):
+
+        if not self.dynamic:
+            raise NotImplementedError()
 
         if axis not in (0, 1):
             raise ValueError('Incorrect axis parameter')
-
-        d = self.shape[2]
 
         if axis == 0:
-            self.bi = np.append(self.bi, np.zeros(by))
-            self.Pi = np.append(self.Pi, np.random.normal(self.init_mean, self.init_sd,
-                                                          size = (by, d)), axis = 0)
+            for i in lst(index):
+                del self.bi[i]
+                del self.Pi[i]
         else:
-            self.bj = np.append(self.bj, np.zeros(by))
-            self.Qj = np.append(self.Qj, np.random.normal(self.init_mean, self.init_sd,
-                                                          size = (by, d)), axis = 0)
-
-
-    def drop(self, index, axis):
-
-        if axis not in (0, 1):
-            raise ValueError('Incorrect axis parameter')
-
-        if axis == 1:
-            np.delete(self.bi, index, axis = None)
-            np.delete(self.Pi, index, axis = 0)
-        else:
-            np.delete(self.bj, index, axis = None)
-            np.delete(self.Qj, index, axis = 0)
-    
-    
-class DynamMatrix(ParamMatrix):
-
-    def __init__(self, indexes, d, init_mean = 0.0, init_sd = 0.1):
-
-        self.encoders = [OnlineIndexer(), OnlineIndexer()]
-
-        shape = []
-        for c in (0, 1):
-            self.encoders[c].fit(indexes[c])
-            shape += [self.encoders[c].size()]
-
-        super(DynamMatrix, self).__init__((*shape, d), init_mean, init_sd)
-
-
-    def get(self, index):
-
-        if index is not None:
-            for c in (0, 1):
-                index[c] = self.encoders[c].transform(index[c])
-                
-        return super(DynamMatrix, self).get(index)
-
-
-    def set(self, value, index):
-
-        if index is not None:
-            for c in (0, 1):
-                index[c] = self.encoders[c].fit_transform(index[c])
-        
-        super(DynamMatrix, self).set(value, index)
-
-
-    def expand(self, index, axis):
-
-        if axis not in (0, 1):
-            raise ValueError('Incorrect axis parameter')
-        
-        prev_size = self.encoders[axis].size()
-        self.encoders[axis].fit(index)
-        by = self.encoders[axis].size() - prev_size
-
-        super(DynamMatrix, self).expand(by, axis)
-
-
-    def drop(self, index, axis):
-
-        if axis not in (0, 1):
-            raise ValueError('Incorrect axis parameter')
-            
-        index = self.encoders[axis].transform(index)
-        super(DynamMatrix, self).drop(index, axis)
+            for i in lst(index):
+                del self.bj[i]
+                del self.Qj[i]
 

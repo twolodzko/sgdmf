@@ -7,7 +7,7 @@ from tqdm import tqdm
 from sklearn.base import BaseEstimator, RegressorMixin
 from sklearn.utils import check_X_y, check_array, shuffle
 
-from .param import DynamMatrix, ParamMatrix
+from .param import ParamContainer, lst
 
 
 class MatrixFactorizer(BaseEstimator, RegressorMixin):
@@ -71,9 +71,8 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
         random_state is the random number generator; If None, the random number generator is
         the RandomState instance used by np.random.
 
-    progress : int (0, 1, 2), default : 0
-        Show the progress bar, 0 disables progress bar, 1 shows progress per epoch, 2 shows progress
-        per epoch and per case.
+    progress : bool, default : False
+        Show the progress bar.
 
     Attributes
     ----------
@@ -135,7 +134,7 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
     def __init__(self, n_components = 100, n_epoch = 5, learning_rate = 0.005,
                  regularization = 0.02, init_mean = 0.0, init_sd = 0.1,
                  fit_intercepts = True, dynamic_indexes = True, shuffle = False,
-                 warm_start = False, random_state = None, progress = 0):
+                 warm_start = False, random_state = None, progress = False):
         
         self.n_components = n_components
         self.n_epoch = n_epoch
@@ -161,7 +160,7 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
         self.N_ = 0
 
     
-    def init_param(self, indexes):
+    def init_param(self, n, m):
         
         """Initialize the parameters
         
@@ -179,20 +178,9 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
         
         """
 
-        if self.dynamic_indexes:
-
-            self.params_ = DynamMatrix(indexes, self.n_components,
-                                       self.init_mean, self.init_sd)
-
-        else:
-
-            if isinstance(indexes, np.ndarray):
-                n, m = np.max(indexes, axis = 0) + 1
-            else:
-                n, m = indexes
-            
-            shape = (n, m, self.n_components)
-            self.params_ = ParamMatrix(shape, self.init_mean, self.init_sd)
+        shape = (n, m, self.n_components)
+        self.params_ = ParamContainer(shape, mean = self.init_mean,
+                                      sd = self.init_sd, dynamic = False)
 
 
     def delete_index(self, index, axis):
@@ -212,7 +200,7 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
             Axis of the element to be removed.
         """
 
-        raise NotImplementedError()
+        self.params_.drop(index, axis)
 
 
     def profiles(self, index, axis):
@@ -265,22 +253,21 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
 
         """
 
-        raise NotImplementedError()
+        if axis == 0:
+            return self.params_.get_param('Pi', index)
+        else:
+            return self.params_.get_param('Qj', index)
         
-        return self.params_.get(index, axis)
-
     
     def _sdg_step(self, ij, y):
         
         # Single step of stochastic grandient descent using single
         # data "point" (a row): x (two indexes), y (numeric value).
         
-        ij = list(ij)
-        mu, bi, bj, p, q = self.params_.get(ij)
-        p, q = p[0], q[0]
+        mu, bi, bj, p, q = self.params_.get(ij, initialize = True)
         
         err = y - (mu + bi + bj + np.dot(p, q))
-            
+        
         if self.fit_intercepts:
             bi = bi + self.learning_rate * (err - self.regularization*bi)
             bj = bj + self.learning_rate * (err - self.regularization*bj)
@@ -288,7 +275,7 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
         p = p + self.learning_rate * (err*q - self.regularization*p)
         q = q + self.learning_rate * (err*p - self.regularization*q)
 
-        self.params_.set([mu, bi, bj, p, q], ij)
+        self.params_.set(ij, [mu, bi, bj, p, q])
 
 
     def partial_fit(self, X, y):
@@ -321,18 +308,10 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
 
         if self.params_ is None:
 
-            if self.dynamic_indexes:
-                indexes = []
-                for c in (0, 1):
-                    indexes += [np.unique(X[:, c])]
-                self.init_param(indexes = indexes)
-            else:
-                n, m = np.max(X, axis = 0) + 1
-                self.init_param(indexes = (n, m))
-        
-        if self.dynamic_indexes:
-            for c in (0, 1):
-                self.params_.expand(X[:, c], axis = c)
+            n, m = np.max(X, axis = 0) + 1
+            shape = (n, m, self.n_components)
+            self.params_ = ParamContainer(shape, mean = self.init_mean, sd = self.init_sd,
+                                          dynamic = self.dynamic_indexes)
         
         # update mu intercept using moving average
         if self.fit_intercepts:
@@ -342,10 +321,10 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
         
         self.N_ += X.shape[0]
         
-        for _ in tqdm(range(self.n_epoch), disable = self.progress <= 0):
+        for _ in tqdm(range(self.n_epoch), disable = not self.progress):
             if self.shuffle:
                 X, y = shuffle(X, y)
-            for row in tqdm(range(X.shape[0]), disable = self.progress <= 1):
+            for row in range(X.shape[0]):
                 self._sdg_step(X[row, :], y[row])
         
         return self
@@ -407,12 +386,9 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
         
         yhat = np.empty(X.shape[0])
         
-        for row in tqdm(range(X.shape[0]), disable = self.progress <= 1):
-
-            ij = list(X[row, :])
-            mu, bi, bj, p, q = self.params_.get(ij)
-            p, q = p[0], q[0]
-
+        for row in range(X.shape[0]):
+            ij = X[row, :]
+            mu, bi, bj, p, q = self.params_.get(ij, initialize = False)
             yhat[row] = mu + bi + bj + np.dot(p, q)
         
         return yhat
