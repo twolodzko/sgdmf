@@ -265,6 +265,8 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
 
         """
 
+        raise NotImplementedError()
+        
         return self.params_.get(index, axis)
 
     
