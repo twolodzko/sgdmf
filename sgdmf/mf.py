@@ -7,7 +7,7 @@ from tqdm import tqdm
 from sklearn.base import BaseEstimator, RegressorMixin
 from sklearn.utils import check_X_y, check_array, shuffle
 
-from .indexer import OnlineIndexer
+from .param import DynamMatrix, ParamMatrix
 
 
 class MatrixFactorizer(BaseEstimator, RegressorMixin):
@@ -157,9 +157,7 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
     def _reset_param(self):
         
         np.random.seed(self.random_state)
-
-        self.intercepts_ = self.P_ = self.Q_ = None
-        self.encoders_ = [OnlineIndexer(), OnlineIndexer()]
+        self.params_ = None
         self.N_ = 0
 
     
@@ -184,93 +182,22 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
         """
 
         if indexes is not None:
+
             if shape is not None:
                 raise ValueError("Use shape or indexes, but not both")
+
             if self.dynamic_indexes:
-                for c in (0, 1):
-                    indexes[c] = self.encoders_[c].fit_transform(indexes[c])
-            n = np.max(indexes[0])
-            m = np.max(indexes[1])
+                self.params_ = DynamMatrix(indexes, self.n_components,
+                                           self.init_mean, self.init_sd)
+            else:
+                n = np.max(indexes[0])
+                m = np.max(indexes[1])
+                shape = (n, m)
 
         if shape is not None:
-            n, m = shape
-        
-        d = self.n_components
-        self.P_ = np.random.normal(self.init_mean, self.init_sd, size = (n, d))
-        self.Q_ = np.random.normal(self.init_mean, self.init_sd, size = (d, m))
-        self.intercepts_ = [0.0, np.zeros(n), np.zeros(m)]
-    
-    
-    def _get_PQ_dims(self):
-        n = self.P_.shape[0]
-        m = self.Q_.shape[1]
-        return n, m
-
-
-    def _check_param(self, X):
-
-        # Check if parameters were initialized and are consistent with data
-        
-        if self.intercepts_ is None or self.P_ is None or self.Q_ is None:
-            raise ValueError('Parameters were not initialized yet')
-        
-        n, m = self._get_PQ_dims()
-        max_i, max_j = X.max(axis = 0) + 1
-
-        if n < max_i or m < max_j:
-            raise KeyError('X contains new indexes')
             
-        if len(self.intercepts_[1]) < max_i or len(self.intercepts_[2]) < max_j:
-            raise KeyError('X contains new indexes')
-    
-
-    def _check_indexes(self, X):
-
-        if X.shape[1] != 2:
-            raise ValueError('X needs to consist of exactly two columns')
-        
-        if not np.all(X >= 0):
-            raise ValueError('Indexes need to be non-negative')
-
-        if not np.all(np.isfinite(X)):
-            raise ValueError('Indexes need to be finite')
-
-        if not X.dtype in ('int', 'int32', 'int64'):
-            raise ValueError('Indexes need to be integers')
-    
-    
-    def _expand_param(self, X):
-
-        # Initialize the parameters for the previously unseen indexes
-
-        n, m = self._get_PQ_dims()
-        d = self.n_components
-        max_i, max_j = X.max(axis = 0) + 1
-        
-        if max_i > n:
-            new_n = max_i - n
-            new_P = np.random.normal(self.init_mean, self.init_sd, size = (new_n, d))
-            self.P_ = np.append(self.P_, new_P, axis = 0)
-            self.intercepts_[1] = np.append(self.intercepts_[1], np.zeros(new_n))
-        
-        if max_j > m:
-            new_m = max_j - m
-            new_Q = np.random.normal(self.init_mean, self.init_sd, size = (d, new_m))
-            self.Q_ = np.append(self.Q_, new_Q, axis = 1)
-            self.intercepts_[2] = np.append(self.intercepts_[2], np.zeros(new_m))
-
-
-    def _encode_ij(self, X, update = True):
-
-        # Encode and update the indexes
-        # If update=True, the indexes are updated when
-        # encountering previously unseen indexes.
-
-        for c in (0, 1):
-            if update:
-                self.encoders_[c].fit(X[:, c])
-            X[:, c] = self.encoders_[c].transform(X[:, c])
-        return X
+            shape = (*shape, self.n_components)
+            self.params_ = ParamMatrix(shape, self.init_mean, self.init_sd)
 
 
     def delete_index(self, index, axis):
@@ -290,43 +217,8 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
             Axis of the element to be removed.
         """
 
-        if axis not in (0, 1):
-            raise ValueError('Incorrect axis parameter')
-
-        if self.dynamic_indexes:
-            index = self.encoders_[axis].transform(index)
-
-        if axis == 0:
-            self.P_ = np.delete(self.P_, index, axis = 0)
-            self.intercepts_[1] = np.delete(self.intercepts_[1], index, axis = 0)
-        else:
-            self.Q_ = np.delete(self.Q_, index, axis = 1)
-            self.intercepts_[2] = np.delete(self.intercepts_[2], index, axis = 0)
+        raise NotImplementedError()
     
-
-    def order_index(self):
-
-        """Order the parameters by indexes
-
-        Parameters are ordered according to indexes, this function can be used
-        after partial_fit() has introduced new indexes.
-        """
-
-        if self.dynamic_indexes:
-
-            for c in (0, 1):
-                keys = self.encoders_[c].keys()
-                order = np.argsort(keys)
-                
-                if c == 0:
-                    self.P_ = self.P_[order, :]
-                else:
-                    self.Q_ = self.Q_[:, order]
-
-                self.intercepts_[c+1] = self.intercepts_[c+1][order]
-
-                self.encoders_[c].reindex()
-
 
     def profiles(self, index, axis):
 
@@ -378,42 +270,30 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
 
         """
 
-        if axis not in (0, 1):
-            raise ValueError('Incorrect axis parameter')
-
-        if axis == 0:
-            if index is None:
-                return self.P_
-            idx = self.encoders_[0].transform(index)
-            return self.P_[idx, :]
-        else:
-            if index is None:
-                return self.Q_
-            idx = self.encoders_[1].transform(index)
-            return self.Q_[:, idx].T
+        return self.params_.get(index, axis)
 
     
-    def _sdg_step(self, x, y):
+    def _sdg_step(self, ij, y):
         
         # Single step of stochastic grandient descent using single
         # data "point" (a row): x (two indexes), y (numeric value).
         
-        mu, bi, bj = self.intercepts_
-        i, j = x
-        p = self.P_[i, :]
-        q = self.Q_[:, j]
+        ij = list(ij)
+        mu, bi, bj, p, q = self.params_.get(ij)
+        p, q = p[0], q[0]
         
-        err = y - (mu + bi[i] + bj[j] + np.dot(p, q))
+        err = y - (mu + bi + bj + np.dot(p, q))
             
         if self.fit_intercepts:
-            bi[i] = bi[i] + self.learning_rate * (err - self.regularization*bi[i])
-            bj[j] = bj[j] + self.learning_rate * (err - self.regularization*bj[j])
-            self.intercepts_ = [mu, bi, bj]
+            bi = bi + self.learning_rate * (err - self.regularization*bi)
+            bj = bj + self.learning_rate * (err - self.regularization*bj)
         
-        self.P_[i, :] = p + self.learning_rate * (err*q - self.regularization*p)
-        self.Q_[:, j] = q + self.learning_rate * (err*p - self.regularization*q)
-    
-    
+        p = p + self.learning_rate * (err*q - self.regularization*p)
+        q = q + self.learning_rate * (err*p - self.regularization*q)
+
+        self.params_.set([mu, bi, bj, p, q], ij)
+
+
     def partial_fit(self, X, y):
         
         """Fit the model according to the given training data.
@@ -441,24 +321,22 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
 
         # using only the first two columns as indexes
         X = X[:, :2]
-        
-        if self.dynamic_indexes:
-            X = self._encode_ij(X)
-        
-        self._check_indexes(X)
-        
-        if self.intercepts_ is None and self.P_ is None and self.Q_ is None:
-            n, m = X.max(axis = 0) + 1
-            self.init_param(shape = (n, m))
-        
-        if self.dynamic_indexes:
-            self._expand_param(X)
-        
-        self._check_param(X)
+
+        if self.params_ is None:
+            if self.dynamic_indexes:
+                indexes = []
+                for c in (0, 1):
+                    indexes += [np.unique(X[c, :])]
+                self.init_param(indexes = indexes)
+            else:
+                n, m = np.max(X, axis = 0) + 1
+                self.init_param(shape = (n, m))
         
         # update mu intercept using moving average
         if self.fit_intercepts:
-            self.intercepts_[0] = (self.intercepts_[0] * self.N_ + np.sum(y)) / (self.N_ + X.shape[0])
+            mu = self.params_.get(axis = -1)
+            mu = (mu * self.N_ + np.sum(y)) / (self.N_ + X.shape[0])
+            self.params_.set(mu, axis = -1)
         
         self.N_ += X.shape[0]
         
@@ -525,45 +403,11 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
         # using only the first two columns as indexes)
         X = X[:, :2]
         
-        if self.dynamic_indexes:
-            X = self._encode_ij(X, update = False)
-            
-        self._check_indexes(X)
-        self._check_param(X)
-        
-        mu, bi, bj = self.intercepts_
         yhat = np.empty(X.shape[0])
         
         for row in tqdm(range(X.shape[0]), disable = self.progress <= 1):
-            i, j = X[row, :]
-            p = self.P_[i, :]
-            q = self.Q_[:, j]
-            yhat[row] = mu + bi[i] + bj[j] + np.dot(p, q)
+            mu, bi, bj, p, q = self.params_.get(X[row, :])
+            yhat[row] = mu + bi + bj + np.dot(p, q)
         
         return yhat
-    
-    
-    def pred_matrix(self):
-        
-        """Predict the matrix of all the n * m pairs of users and items
-        
-        WARNING: this may be slow and computationally demanding!
-        
-        Returns
-        -------
-        
-        array, shape (n, m)
-           Predicted target values per all n * m indexes in the training data X.
-           
-        """
-        
-        n, m = self._get_PQ_dims()
-        
-        if self.fit_intercepts:
-            mu = self.intercepts_[0]
-            bi = np.array([self.intercepts_[1]] * m).transpose()
-            bj = np.array([self.intercepts_[2]] * n)
-            return mu + bi + bj + np.dot(self.P_, self.Q_)
-        else:
-            return np.dot(self.P_, self.Q_)
     

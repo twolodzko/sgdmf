@@ -39,10 +39,7 @@ class OnlineIndexer(object):
     
     
     def __init__(self):
-        
-        self.classes_ = dict()
-        self.last_index_ = None
-    
+        self.classes_ = dict()    
     
     def reset(self):
         
@@ -71,12 +68,10 @@ class OnlineIndexer(object):
         self : returns an instance of self.
         """
         
-        new_keys = lst([k for k in np.unique(y) if k not in self.classes_])
+        new_keys = lst([str(k) for k in np.unique(y) if str(k) not in self.classes_])
         if len(new_keys):
-            for v, k in enumerate(new_keys, start = self.next_index()):
-                self.classes_[k] = v
-            self.last_index_ = v
-        
+            for v, k in enumerate(new_keys, start = self.size()):
+                self.classes_[str(k)] = v     
         return self
     
     
@@ -94,7 +89,7 @@ class OnlineIndexer(object):
         array : indexes for the keys.
         """
         
-        return lst([self.classes_[k] for k in lst(y)])
+        return lst([self.classes_[str(k)] for k in lst(y)])
 
 
     def fit_transform(self, y):
@@ -139,14 +134,11 @@ class OnlineIndexer(object):
         return list(self.classes_.values())
     
     
-    def next_index(self):
+    def size(self):
         
         """Next index to be used for the unseen key"""
         
-        if self.last_index_:
-            return self.last_index_ + 1
-        else:
-            return 0
+        return len(self.classes_)
     
     
     def delete(self, keys):
@@ -159,7 +151,7 @@ class OnlineIndexer(object):
         """
         
         for k in lst(keys):
-            del self.classes_[k]
+            del self.classes_[str(k)]
         
         return self
     
@@ -178,6 +170,6 @@ class OnlineIndexer(object):
         keys = sorted(self.keys())
         self.reset()
         for v, k in enumerate(keys):
-            self.classes_[k] = v
+            self.classes_[str(k)] = v
         return self
 
