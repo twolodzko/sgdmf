@@ -2,7 +2,7 @@
 from __future__ import print_function
 
 import numpy as np
-from collections import Iterable
+from collections import Iterable, defaultdict
 
 def lst(x):
     if isinstance(x, Iterable):
@@ -24,10 +24,10 @@ class ParamContainer(object):
         n, m, d = shape
 
         if self.dynamic:
-            self.bi = dict()
-            self.bj = dict()
-            self.Pi = dict()
-            self.Qj = dict()
+            self.bi = defaultdict(lambda : 0.0)
+            self.bj = defaultdict(lambda : 0.0)
+            self.Pi = defaultdict(lambda : np.random.normal(self.mean, self.sd, size = d))
+            self.Qj = defaultdict(lambda : np.random.normal(self.mean, self.sd, size = d))
         else:
             self.bi = np.zeros(n)
             self.bj = np.zeros(m)
@@ -35,45 +35,16 @@ class ParamContainer(object):
             self.Qj = np.random.normal(self.mean, self.sd, size = (m, d))
 
 
-    def get(self, index, initialize = False):
+    def get(self, index):
 
         mu = self.mu
+        bi = self.bi[index[0]]
+        bj = self.bj[index[1]]
 
         if self.dynamic:
-
-            if initialize:
-
-                if index[0] not in self.bi:
-                    self.bi[index[0]] = 0.0
-                if index[1] not in self.bj:
-                    self.bj[index[1]] = 0.0
-                if index[0] not in self.Pi:
-                    self.Pi[index[0]] = np.random.normal(self.mean, self.sd, self.d)
-                if index[1] not in self.Qj:
-                    self.Qj[index[1]] = np.random.normal(self.mean, self.sd, self.d)
-
-            bi = self.bi[index[0]]
-            bj = self.bj[index[1]]
             Pi = self.Pi[index[0]]
             Qj = self.Qj[index[1]]
-
         else:
-
-            if initialize:
-                
-                if index[0] >= self.bi.shape[0]:
-                    self.bi = np.append(self.bi, 0.0)
-                if index[1] >= self.bj.shape[0]:
-                    self.bj = np.append(self.bj, 0.0)
-                if index[0] >= self.Pi.shape[0]:
-                    rnd = np.random.normal(self.mean, self.sd, self.d)
-                    self.Pi = np.append(self.Pi, rnd, axis = 0)
-                if index[1] >= self.Qj.shape[0]:
-                    rnd = np.random.normal(self.mean, self.sd, self.d)
-                    self.Qj = np.append(self.Qj, rnd, axis = 0)
-
-            bi = self.bi[index[0]]
-            bj = self.bj[index[1]]
             Pi = self.Pi[index[0], :]
             Qj = self.Qj[index[1], :]
 
@@ -94,15 +65,13 @@ class ParamContainer(object):
     def set(self, index, value):
 
         self.mu = value[0]
+        self.bi[index[0]] = value[1]
+        self.bj[index[1]] = value[2]
 
         if self.dynamic:
-            self.bi[index[0]] = value[1]
-            self.bj[index[1]] = value[2]
             self.Pi[index[0]] = value[3]
             self.Qj[index[1]] = value[4]
         else:
-            self.bi[index[0]] = value[1]
-            self.bj[index[1]] = value[2]
             self.Pi[index[0], :] = value[3]
             self.Qj[index[1], :] = value[4]
 
@@ -115,10 +84,12 @@ class ParamContainer(object):
         if self.dynamic:
             assert len(self.bi) == len(self.Pi)
             assert len(self.bj) == len(self.Qj)
+
             return (len(self.Pi), len(self.Qj), self.d)
         else:
             assert self.bi.shape[0] == self.Pi.shape[0]
             assert self.bj.shape[0] == self.Qj.shape[0]
+
             return (self.Pi.shape[0], self.Qj.shape[0], self.d)
 
 

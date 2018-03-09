@@ -264,7 +264,7 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
         # Single step of stochastic grandient descent using single
         # data "point" (a row): x (two indexes), y (numeric value).
         
-        mu, bi, bj, p, q = self.params_.get(ij, initialize = True)
+        mu, bi, bj, p, q = self.params_.get(ij)
         
         err = y - (mu + bi + bj + np.dot(p, q))
         
@@ -388,7 +388,7 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
         
         for row in range(X.shape[0]):
             ij = X[row, :]
-            mu, bi, bj, p, q = self.params_.get(ij, initialize = False)
+            mu, bi, bj, p, q = self.params_.get(ij)
             yhat[row] = mu + bi + bj + np.dot(p, q)
         
         return yhat
