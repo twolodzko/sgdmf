@@ -3,7 +3,7 @@ from distutils.core import setup
 
 setup(
     name = 'sgdmf',
-    version = '0.1.0',
+    version = '0.2.0',
     author = 'Tymoteusz Wolodzko',
     author_email = 'twolodzko+sgdmf@gmail.com',
     packages = ['sgdmf'],
