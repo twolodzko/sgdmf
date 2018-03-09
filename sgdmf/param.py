@@ -24,8 +24,8 @@ class ParamContainer(object):
         n, m, d = shape
 
         if self.dynamic:
-            self.bi = defaultdict(np.float64)
-            self.bj = defaultdict(np.float64)
+            self.bi = defaultdict(float)
+            self.bj = defaultdict(float)
             self.Pi = defaultdict(lambda : np.random.normal(self.mean, self.sd, size = d))
             self.Qj = defaultdict(lambda : np.random.normal(self.mean, self.sd, size = d))
         else:
