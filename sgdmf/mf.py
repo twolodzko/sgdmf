@@ -181,6 +181,9 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
         
         """
 
+        if self.dynamic_indexes:
+            raise NotImplementedError()
+
         shape = (n, m, self.n_components)
         self.params_ = ParamContainer(shape, mean = self.init_mean,
                                       sd = self.init_sd, dynamic = False)
@@ -202,6 +205,9 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
         axis : 0 or 1
             Axis of the element to be removed.
         """
+
+        if not self.dynamic_indexes:
+            raise NotImplementedError()
 
         self.params_.drop(index, axis)
 
