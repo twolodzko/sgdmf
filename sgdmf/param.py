@@ -10,6 +10,11 @@ def lst(x):
     else:
         return (x,)
 
+def rng_norm(mean, sd, size):
+    def rng():
+        return np.random.normal(mean, sd, size = size)
+    return rng
+
 
 class ParamContainer(object):
 
@@ -26,8 +31,8 @@ class ParamContainer(object):
         if self.dynamic:
             self.bi = defaultdict(float)
             self.bj = defaultdict(float)
-            self.Pi = defaultdict(lambda : np.random.normal(self.mean, self.sd, size = d))
-            self.Qj = defaultdict(lambda : np.random.normal(self.mean, self.sd, size = d))
+            self.Pi = defaultdict(rng_norm(self.mean, self.sd, d))
+            self.Qj = defaultdict(rng_norm(self.mean, self.sd, d))
         else:
             self.bi = np.zeros(n)
             self.bj = np.zeros(m)
