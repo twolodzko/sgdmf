@@ -21,7 +21,7 @@ if __name__ == "__main__":
     mf.fit(X, y)
 
     n, m = X.max(axis = 0) + 1
-    assert np.all(mf.params_.size() == (n, m, d))
+    assert np.all(mf.params_.shape() == (n, m, d))
     assert mf.score(X, y) > 0.99
 
     ## Update on new data
@@ -35,7 +35,7 @@ if __name__ == "__main__":
 
     mf.partial_fit(X_new, y_new)
 
-    assert np.all(mf.params_.size() == (5, 4, d))
+    assert np.all(mf.params_.shape() == (5, 4, d))
 
 
     ## Train with fixed indexes
@@ -52,11 +52,11 @@ if __name__ == "__main__":
 
     mf.init_param(5, 6)
 
-    assert np.all(mf.params_.size() == (5, 6, d))
+    assert np.all(mf.params_.shape() == (5, 6, d))
 
     mf.partial_fit(X, y)
 
-    assert np.all(mf.params_.size() == (5, 6, d))
+    assert np.all(mf.params_.shape() == (5, 6, d))
     assert mf.score(X, y) > 0.99
 
     # shuffle=True works properly
@@ -99,10 +99,10 @@ if __name__ == "__main__":
 
     mf.fit(X, y)
 
-    assert np.all(mf.params_.size() == (3, 3, d))
+    assert np.all(mf.params_.shape() == (3, 3, d))
 
     mf.delete_index(0, axis = 0)
-    assert np.all(mf.params_.size() == (2, 3, d))
+    assert np.all(mf.params_.shape() == (2, 3, d))
 
     mf.delete_index(0, axis = 1)
-    assert np.all(mf.params_.size() == (2, 2, d))
+    assert np.all(mf.params_.shape() == (2, 2, d))

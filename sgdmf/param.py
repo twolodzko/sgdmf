@@ -80,7 +80,7 @@ class ParamContainer(object):
         setattr(self, param, value)
         
 
-    def size(self):
+    def shape(self):
         if self.dynamic:
             assert len(self.bi) == len(self.Pi)
             assert len(self.bj) == len(self.Qj)
@@ -102,11 +102,11 @@ class ParamContainer(object):
             raise ValueError('Incorrect axis parameter')
 
         if axis == 0:
-            for i in lst(index):
-                del self.bi[i]
-                del self.Pi[i]
+            for ix in lst(index):
+                del self.bi[ix]
+                del self.Pi[ix]
         else:
-            for i in lst(index):
-                del self.bj[i]
-                del self.Qj[i]
+            for ix in lst(index):
+                del self.bj[ix]
+                del self.Qj[ix]
 

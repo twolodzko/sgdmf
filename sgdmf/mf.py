@@ -55,8 +55,11 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
         only the P and Q latent matrices are fitted.
         
     dynamic_indexes : bool, default : True
-        As new indexes occur, expand the model for those indexes (change dimensions of bi, bj, P, Q).
-        If set to False, if new index will occure during partial_fit(), it would result in an error.
+        With dynamic_indexes=True, when new indexes are observed in the data, the parameters
+        for those indexes are randomly initialized on-the-fly (no matter if fitting the model,
+        or making predictions, so it would not produce IndexError). With dynamic_indexes=False,
+        the parameters are initialized when invoking fit(), or param_init() and do not change
+        (so it would produce IndexError for the unseen indexes).
 
     shuffle : bool, default : False
         Whether or not the training data should be shuffled before each epoch.
@@ -93,30 +96,30 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
     >>> import pandas as pd
     >>> from sgdmf import MatrixFactorizer
     >>> data = pd.DataFrame({
-                    'user_id' : [0,0,1,1,2,2],
-                    'movie_id' : [0,1,2,0,1,2],
-                    'rating' : [1,1,2,2,3,3]
-                })
+            'user_id' : [0,0,1,1,2,2],
+            'movie_id' : [0,1,2,0,1,2],
+            'rating' : [1,1,2,2,3,3]
+        })
     >>> X = data[['user_id', 'movie_id']]
     >>> y = data['rating']
     >>> mf = MatrixFactorizer(n_components = 2, n_epoch = 100, random_state = 42)
     >>> mf.partial_fit(X, y)
     MatrixFactorizer(dynamic_indexes=True, fit_intercepts=True, init_mean=0.0,
-             init_sd=0.1, learning_rate=0.005, n_components=2, n_epoch=100,
-             progress=0, random_state=42, regularization=0.02, shuffle=False,
-             warm_start=False)
+        init_sd=0.1, learning_rate=0.005, n_components=2, n_epoch=100,
+        progress=0, random_state=42, regularization=0.02, shuffle=False,
+        warm_start=False)
     >>> mf.score(X, y)
-    0.8724592718646421
+    0.8724757244926344
     >>> mf.partial_fit(X, y)
     MatrixFactorizer(dynamic_indexes=True, fit_intercepts=True, init_mean=0.0,
-             init_sd=0.1, learning_rate=0.005, n_components=2, n_epoch=100,
-             progress=0, random_state=42, regularization=0.02, shuffle=False,
-             warm_start=False)
+        init_sd=0.1, learning_rate=0.005, n_components=2, n_epoch=100,
+        progress=0, random_state=42, regularization=0.02, shuffle=False,
+        warm_start=False)
     >>> mf.score(X, y)
-    0.9641971102264503
+    0.9641448207666099
     >>> mf.predict(X)
-    array([1.04945549, 1.22171768, 2.14456295, 1.85838361, 2.78110453,
-           2.94767306])
+    array([1.05198763, 1.22044432, 2.14679539, 1.85610573, 2.78318431,
+           2.94653213])
     
     References
     ----------
@@ -231,25 +234,25 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
         >>> import pandas as pd
         >>> from sgdmf import MatrixFactorizer
         >>> data = pd.DataFrame({
-                        'user_id' : [0,0,1,1,2,2],
-                        'movie_id' : [0,1,2,0,1,2],
-                        'rating' : [1,1,2,2,3,3]
-                    })
+                'user_id' : [0,0,1,1,2,2],
+                'movie_id' : [0,1,2,0,1,2],
+                'rating' : [1,1,2,2,3,3]
+            })
         >>> X = data[['user_id', 'movie_id']]
         >>> y = data['rating']
         >>> mf = MatrixFactorizer(n_components = 2, n_epoch = 500, random_state = 42)
         >>> mf.partial_fit(X, y)
         MatrixFactorizer(dynamic_indexes=True, fit_intercepts=True, init_mean=0.0,
-                 init_sd=0.1, learning_rate=0.005, n_components=2, n_epoch=500,
-                 progress=0, random_state=42, regularization=0.02, shuffle=False,
-                 warm_start=False)
+            init_sd=0.1, learning_rate=0.005, n_components=2, n_epoch=500,
+            progress=0, random_state=42, regularization=0.02, shuffle=False,
+            warm_start=False)
         >>> mf.profiles(X.iloc[:, 0], axis = 0)
-        array([[-0.04421832,  0.00246789],
-               [-0.04421832,  0.00246789],
-               [ 0.11220089,  0.17532256],
-               [ 0.11220089,  0.17532256],
-               [ 0.00394179, -0.07307977],
-               [ 0.00394179, -0.07307977]])
+        array([[ 0.06145482, -0.04623516],
+               [ 0.06145482, -0.04623516],
+               [ 0.18176388,  0.10350729],
+               [ 0.18176388,  0.10350729],
+               [-0.09757545, -0.04445318],
+               [-0.09757545, -0.04445318]])
 
         """
 
