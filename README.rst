@@ -34,8 +34,9 @@ after that, the MatrixFactorizer model an be fitted.
 Since MatrixFactorizer is fitted using stochastic gradient descent,
 it is possible to train model using online learning in batches
 (or case by case), using the partial_fit() function. MatrixFactorizer
-is able to adapt to changes in the data (new indexes) using the 
-OnlineFactorizer class methods.
+is able to adapt to changes in the data (new indexes) by initializing
+the parameters for yet unseen indexes on-the-fly (when using
+dynamic_indexes=True).
 
 References
 ----------
