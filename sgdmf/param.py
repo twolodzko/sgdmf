@@ -63,7 +63,7 @@ class ParamContainer(object):
         else:
             out = []
             for ix in lst(index):
-                out += [getattr(self, param)[ix]]
+                out.append(getattr(self, param)[ix])
             return np.array(out)
 
 
