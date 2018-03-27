@@ -1,6 +1,7 @@
 
 from __future__ import print_function
 
+import json
 import numpy as np
 from tqdm import tqdm
 
@@ -181,12 +182,9 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
         
         """
 
-        if self.dynamic_indexes:
-            raise NotImplementedError()
-
         shape = (n, m, self.n_components)
         self.params_ = ParamContainer(shape, mean = self.init_mean,
-                                      sd = self.init_sd, dynamic = False)
+                                      sd = self.init_sd, dynamic = self.dynamic_indexes)
 
 
     def delete_index(self, index, axis):
@@ -401,4 +399,45 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
             yhat[row] = mu + bi + bj + np.dot(p, q)
         
         return yhat
+
+
+    def to_json(self, file = None):
+        
+        out = self.get_params()
+
+        if self.dynamic_indexes:
+            out['params_'] = self.params_.to_dict()
+        else:
+            raise NotImplementedError()
+
+        out['N_'] = self.N_
+
+        if file is not None:
+            json.dump(out, open(file, 'wb'))
+        else:
+            return json.dumps(out)
+
     
+    def from_json(self, text = None, file = None):
+
+        if text is None and file is None:
+            raise ValueError('Provide either text or file')
+
+        if file is not None:
+            inp = json.load(open(file, 'r'))
+        else:
+            inp = json.loads(text)
+        
+        params = {}
+
+        for key in self.get_params().keys():
+            params[key] = inp[key]
+
+        self.__init__(**params)
+        self.N_ = inp['N_']
+
+        self.init_param(0, 0)
+        self.params_.from_dict(inp['params_'])
+
+        
+
