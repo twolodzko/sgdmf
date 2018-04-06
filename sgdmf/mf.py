@@ -402,42 +402,11 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
 
 
     def to_json(self, file = None):
-        
-        out = self.get_params()
+        raise NotImplementedError()
 
-        if self.dynamic_indexes:
-            out['params_'] = self.params_.to_dict()
-        else:
-            raise NotImplementedError()
 
-        out['N_'] = self.N_
-
-        if file is not None:
-            json.dump(out, open(file, 'wb'))
-        else:
-            return json.dumps(out)
-
-    
-    def from_json(self, text = None, file = None):
-
-        if text is None and file is None:
-            raise ValueError('Provide either text or file')
-
-        if file is not None:
-            inp = json.load(open(file, 'r'))
-        else:
-            inp = json.loads(text)
-        
-        params = {}
-
-        for key in self.get_params().keys():
-            params[key] = inp[key]
-
-        self.__init__(**params)
-        self.N_ = inp['N_']
-
-        self.init_param(0, 0)
-        self.params_.from_dict(inp['params_'])
+    def from_json(self, text):
+        raise NotImplementedError()
 
         
 
