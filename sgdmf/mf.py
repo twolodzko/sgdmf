@@ -19,7 +19,7 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
     using stochastic gradient descent. Additional intercepts mu, bi, bj can be included,
     leading to the following model
 
-        R[i,j] = mu + bi[i] + bj[j] + P[i,] * Q[,j]
+        R[i,j] = mu + bi[i] + bj[j] + P[i,:] * Q[:,j]
 
     MatrixFactorizer assumes matrix R to be stored in a "long" format, in two arrays X (n_samples, 2)
     and y (n_samples). The i, j indexes are stored in the rows of X and the R[i,j] values are
@@ -257,6 +257,18 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
                [ 0.18176388,  0.10350729],
                [-0.09757545, -0.04445318],
                [-0.09757545, -0.04445318]])
+        >>> mf.to_json()
+        '{"warm_start": false, "regularization": 0.02, "n_epoch": 500, "init_sd": 0.1,
+        "n_components": 2, "N_": 6, "dynamic_indexes": true, "params_": {"bj": {"0":
+        -0.06409898433964623, "1": -0.0019068310202431102, "2": 0.05936058426095285},
+        "Pi": {"0": [0.06145482151849421, -0.04623516129138879], "1": [0.1817638847609294,
+        0.10350729160162885], "2": [-0.09757545375165412, -0.044453184423111566]}, "mean":
+        0.0, "dynamic": true, "Qj": {"0": [0.08619762308157557, 0.1710576491958684], "1":
+        [-0.09627508097862131, -0.023139778879627055], "2": [-0.10563940165736373,
+        0.012631090591355323]}, "sd": 0.1, "bi": {"0": -0.9272046624145349, "1":
+        -0.005262530134984762, "2": 0.9256992817522863}, "mu": 2.0, "shape": [3, 3, 2]},
+        "progress": 0, "fit_intercepts": true, "init_mean": 0.0, "learning_rate": 0.005,
+        "random_state": 42, "shuffle": false}'
 
         """
 
@@ -417,21 +429,21 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
         return json.dumps(out)
 
 
-    def from_json(self, model):
+    def from_json(self, json_string):
 
         """Import model from JSON dump
 
         Parameters
         ----------
 
-        model : str
+        json_string : str
             String containing the JSON representation of the model. 
         """
 
-        model = json.loads(model)
-        init_params = { key : model[key] for key in self.__init__.__code__.co_varnames if key != 'self' }
+        params = json.loads(json_string)
+        init_params = { key : params[key] for key in self.__init__.__code__.co_varnames if key != 'self' }
         self.__init__(**init_params)
-        self.N_ = model['N_']
+        self.N_ = params['N_']
         self.params_ = ParamContainer()
-        self.params_.from_dict(model['params_'])
+        self.params_.from_dict(params['params_'])
 

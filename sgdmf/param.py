@@ -18,6 +18,41 @@ def rng_norm(mean, sd, size):
 
 class ParamContainer(object):
 
+    """Container for parameters of MatrixFactorizer model
+
+    Methods:
+    --------
+
+    __init__(shape = (0, 0, 0), mean = 0.0, sd = 0.1, dynamic = False)
+        Initialize the empty container. When dynamic=True, parameters are 
+        stored in numpy arrays, otherwise in defaultdict objects.
+
+    get(index)
+        Get parameters for specific (i,j) index.
+
+    get_param(param, index = None)
+        Get specific parameter, can be filtered by index.
+
+    set(index, value)
+        Set parameters (bi,bj,Pi,Qj) for specific (i,j) index.
+    
+    set_param(param, value)
+        Set specific parameter to given value.
+
+    get_shape()
+        Returns the (n,m,d) shape of the parameters.
+
+    drop(index, axis)
+        Drop particular index. Works only when dynamic=True. 
+    
+    to_dict()
+        Return object as a JSON-friendly dict.
+
+    from_dict(input)
+        Import parameters from dict.
+
+    """
+
     def __init__(self, shape = (0, 0, 0), mean = 0.0,
                  sd = 0.1, dynamic = False):
 
