@@ -23,10 +23,10 @@ class ParamContainer(object):
 
         self.mean = mean
         self.sd = sd
-        self.d = shape[2]
+        self.shape = shape
         self.dynamic = dynamic
         self.mu = 0.0
-        n, m, d = shape
+        n, m, d = self.shape
 
         if self.dynamic:
             self.bi = defaultdict(float)
@@ -88,22 +88,26 @@ class ParamContainer(object):
             self.Pi[index[0], :] = value[3]
             self.Qj[index[1], :] = value[4]
 
+        self.shape = self.get_shape()
+
 
     def set_param(self, param, value):
         setattr(self, param, value)
+        self.shape = self.get_shape()
         
 
-    def shape(self):
+    def get_shape(self):
+
         if self.dynamic:
             assert len(self.bi) == len(self.Pi)
             assert len(self.bj) == len(self.Qj)
 
-            return (len(self.Pi), len(self.Qj), self.d)
+            return (len(self.Pi), len(self.Qj), self.shape[2])
         else:
             assert self.bi.shape[0] == self.Pi.shape[0]
             assert self.bj.shape[0] == self.Qj.shape[0]
 
-            return (self.Pi.shape[0], self.Qj.shape[0], self.d)
+            return (self.Pi.shape[0], self.Qj.shape[0], self.shape[2])
 
 
     def drop(self, index, axis):
@@ -125,11 +129,44 @@ class ParamContainer(object):
                 del self.bj[ix]
                 del self.Qj[ix]
 
+        self.shape = self.get_shape()
+
 
     def to_dict(self):
-        raise NotImplementedError()
+
+        out = (self.__dict__).copy()
+        out['shape'] = self.get_shape()
+
+        if self.dynamic:
+            for par in ['bi', 'bj', 'Pi', 'Qj']:
+                out[par] = dict(out[par])
+                if par in ['Pi', 'Qj']:
+                    for k in out[par]:
+                        out[par][k] = out[par][k].tolist()
+        else:
+            for par in ['bi', 'bj', 'Pi', 'Qj']:
+                out[par] = out[par].tolist()
+
+        return out
 
 
     def from_dict(self, input):
-        raise NotImplementedError()
+    
+        self.__init__(input['shape'], input['mean'],
+                      input['sd'], input['dynamic'])
+
+        setattr(self, 'mu', input['mu'])
+
+        if not self.dynamic:
+            for par in ['bi', 'bj', 'Pi', 'Qj']:
+                setattr(self, par, np.array(input[par]))
+        else:    
+            for par in ['bi', 'bj']:
+                setattr(self, par, defaultdict(float, input[par]))
+            for k in input['Pi']:
+                self.Pi[k] = np.array(input['Pi'][k])
+            for k in input['Qj']:
+                self.Qj[k] = np.array(input['Qj'][k])
+
+        self.shape = self.get_shape()
 

@@ -401,12 +401,37 @@ class MatrixFactorizer(BaseEstimator, RegressorMixin):
         return yhat
 
 
-    def to_json(self, file = None):
-        raise NotImplementedError()
+    def to_json(self):
+
+        """Export model to JSON format
+
+        Returns
+        -------
+
+        str
+            JSON representation of the model.
+        """
+
+        out = (self.__dict__).copy()
+        out['params_'] = self.params_.to_dict()
+        return json.dumps(out)
 
 
-    def from_json(self, text):
-        raise NotImplementedError()
+    def from_json(self, model):
 
-        
+        """Import model from JSON dump
+
+        Parameters
+        ----------
+
+        model : str
+            String containing the JSON representation of the model. 
+        """
+
+        model = json.loads(model)
+        init_params = { key : model[key] for key in self.__init__.__code__.co_varnames if key != 'self' }
+        self.__init__(**init_params)
+        self.N_ = model['N_']
+        self.params_ = ParamContainer()
+        self.params_.from_dict(model['params_'])
 
